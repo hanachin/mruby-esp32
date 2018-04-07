@@ -57,9 +57,16 @@ MRuby::CrossBuild.new('esp32') do |conf|
 
   conf.gem :core => "mruby-print"
   conf.gem :core => "mruby-compiler"
-  # conf.gem :github => "mruby-esp32/mruby-esp32-system"
+  conf.gem :github => "mruby-esp32/mruby-esp32-system"
   # conf.gem :github => "mruby-esp32/mruby-esp32-wifi"
   # conf.gem :github => "mruby-esp32/mruby-esp32-i2c"
+  conf.gem :core => "mruby-sprintf"
+  conf.gem :core => "mruby-string-ext"
+  conf.gem :core => "mruby-hash-ext"
+
+  conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-ext_ms_to_ticks"
+  conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-ext_esp_err"
   conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-i2c"
+  conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-gpio"
   conf.gem "/home/sei/src/github.com/hanachin/mruby-mcp23017"
 end
