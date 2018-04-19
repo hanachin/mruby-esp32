@@ -1,53 +1,54 @@
-i2c = ESP32::I2C.new(ESP32::I2C::NUM_1, ESP32::I2C::MODE_MASTER, 0, 0, 0)
+i2c = ESP32::I2C.new(ESP32::I2C::NUM_0, ESP32::I2C::MODE_MASTER, 0, 0, 0)
 conf = ::ESP32::I2C::Config.new(
   mode:          ::ESP32::I2C::MODE_MASTER,
-  sda_io_num:    ::ESP32::GPIO::NUM_18,
-  sda_pullup_en: ::ESP32::GPIO::PULLUP_DISABLE,
-  scl_io_num:    ::ESP32::GPIO::NUM_19,
-  scl_pullup_en: ::ESP32::GPIO::PULLUP_DISABLE,
-  clk_speed:     ::MCP23017::SUPPORTED_FREQ.first,
-  addr_10bit_en: ::ESP32::I2C::ADDR_BIT_7,
-  slave_addr:    0x00
+  sda_io_num:    ::ESP32::GPIO::NUM_21,
+  sda_pullup_en: ::ESP32::GPIO::PULLUP_ENABLE,
+  scl_io_num:    ::ESP32::GPIO::NUM_22,
+  scl_pullup_en: ::ESP32::GPIO::PULLUP_ENABLE,
+  clk_speed:     ::MCP23017::SUPPORTED_FREQ[1]
 )
 i2c.param_config(conf)
 i2c.driver_install
 
-def i2c.write(addr, reg, data)
-  cmd do |c|
-    c.master_start
-    b = ((addr << 1) | ::ESP32::I2C::MASTER_WRITE).chr
-    c.master_write_byte(b, true)
-    c.master_write_byte(reg.chr, true)
-    c.master_write(data, true)
-    c.master_stop
-  end
-end
-
-def i2c.read(addr, reg, n)
-  s = nil
-  cmd do |c|
-    c.master_start
-    b = ((addr << 1) | ::ESP32::I2C::MASTER_WRITE).chr
-    c.master_write_byte(b, true)
-    c.master_write_byte(reg.chr, true)
-    c.master_start
-    b = ((addr << 1) | ::ESP32::I2C::MASTER_READ).chr
-    c.master_write_byte(b, true)
-    ret, s = c.master_read(n, ESP32::I2C::MASTER_ACK)
-    c.master_stop
-  end
-  s
-end
+i2c2 = ESP32::I2C.new(ESP32::I2C::NUM_1, ESP32::I2C::MODE_MASTER, 0, 0, 0)
+conf2 = ::ESP32::I2C::Config.new(
+  mode:          ::ESP32::I2C::MODE_MASTER,
+  sda_io_num:    ::ESP32::GPIO::NUM_2,
+  sda_pullup_en: ::ESP32::GPIO::PULLUP_ENABLE,
+  scl_io_num:    ::ESP32::GPIO::NUM_16,
+  scl_pullup_en: ::ESP32::GPIO::PULLUP_ENABLE,
+  clk_speed:     ::MCP23017::SUPPORTED_FREQ[1]
+)
+i2c2.param_config(conf2)
+i2c2.driver_install
 
 low = MCP23017::INPUT_LOW
-mcp23017 = MCP23017.new(i2c, a0: low, a1: low, a2: low)
-p mcp23017.write_gppua(0b11111111)
-p mcp23017.write_gppub(0b11111111)
+high = MCP23017::INPUT_HIGH
 
-loop do
-  data = mcp23017.read_pins
-  puts "%08b%08b" % [data[0].ord, data[1].ord]
+l1 = MCP23017.new(i2c, a0: low, a1: low, a2: low)
+l2 = MCP23017.new(i2c, a0: high, a1: low, a2: low)
+r1 = MCP23017.new(i2c2, a0: low, a1: high, a2: low)
+r2 = MCP23017.new(i2c2, a0: high, a1: high, a2: low)
+
+[l1, l2, r1, r2].each do |mcp23017|
+  puts "gppua"
+  mcp23017.write_gppua(0b11111111)
+  puts "gppub"
+  mcp23017.write_gppub(0b11111111)
+  puts "ipola"
+  mcp23017.write_ipola(0b11111111)
+  puts "ipolb"
+  mcp23017.write_ipolb(0b11111111)
 end
 
-# # __END__
-# # mcp23017[MCP23017::GPA0]
+while true
+  {L1: l1, L2: l2, R1: r1, R2: r2}.each do |key, mcp23017|
+    begin
+      data = mcp23017.read_pins
+      puts "%s:%08b%08b" % [key, data[0].ord, data[1].ord]
+    rescue ESP32::Error
+      retry
+    end
+  end
+  ESP32::System.delay(1000)
+end
