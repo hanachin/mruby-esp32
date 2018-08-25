@@ -1,3 +1,92 @@
+# ESP32::NVS.open("namespace", ESP32::NVS::READWRITE) do |nvs|
+#   puts nvs.get_i8("8")
+#   puts nvs.get_i16("16")
+#   puts nvs.get_i32("32")
+#   # nvs.set_i64("64", 64) # depends on MRB_INT_BIT
+#   puts nvs.get_str("str")
+#   puts nvs.get_blob("blob")
+# end
+
+# ESP32::NVS.open("namespace", ESP32::NVS::READWRITE) do |nvs|
+#   nvs.set_i8("8", 8)
+#   nvs.set_i16("16", 16)
+#   nvs.set_i32("32", 32)
+#   # nvs.set_i64("64", 64) # depends on MRB_INT_BIT
+#   nvs.set_str("str", "STR")
+#   nvs.set_blob("blob", "BLOB")
+# end
+
+GATTC_TAG = "GATTC_DEMO"
+PROFILE_A_APP_ID = 0
+
+remote_device_name = "TODO"
+connect = false
+
+ESP32::BT::Controller.mem_release(ESP32::ESP_BT_MODE_CLASSIC_BT)
+ESP32::BT::Controller.init
+ESP32::BT::Controller.enable
+ESP32::Bluedroid.init
+ESP32::Bluedroid.enable
+
+def log_e(tag, message)
+  raise "#{tag}: #{message}"
+end
+
+def log_i(tag, message)
+  "#{tag}: #{message}"
+end
+
+def esp_log_buffer_hex(tag, buf)
+  print "#{tag}: "
+  # TODO
+  p buf
+end
+
+ESP32::BLE::GAP.register_callback do |param|
+  case param
+  when ESP32::BLE::GAP::ScanParamCmpl
+    duration = 30
+    ESP32::BLE::GAP.start_scanning(duration)
+  when ESP32::BLE::GAP::ScanStartCmpl
+    unless param.success?
+      log_e GATTC_TAG, ("scan start failed, error status = %x" % param.status)
+      break
+    end
+    log_i GATTC_TAG, "scan start success"
+  when ESP32::BLE::GAP::ScanRst
+    if param.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT
+      esp_log_buffer_hex(param.bda)
+      log_i GATTC_TAG, ("searched Adv Data Len %d, Scan Response Len %d" % [param.adv_data_len, param.scan_rsp_len])
+      adv_name = param.adv_name
+      log_i GATTC_TAG, ("searched Device Name Len %d" % adv_name.length)
+      log_i GATTC_TAG, adv_name
+      log_i GATTC_TAG, "\n"
+
+      if adv_name == remote_device_name
+        log_i GATTC_TAG, ("searched device %s\n" % remote_device_name)
+        unless connect
+          connect = true
+          log_i GATTC_TAG, "connect to the remote device."
+          ESP32::BLE::GAP.stop_scanning
+        end
+      end
+    end
+  else
+    # TODO
+    p param
+  end
+end
+
+ESP32::BLE::GATTC.register_callback do |gattc_if, param|
+  puts gattc_if
+end
+
+ESP32::BLE::GATTC.app_register(PROFILE_A_APP_ID)
+
+ESP32::BLE::GATT.set_local_mtu(500)
+
+raise "owari"
+
 i2c = ESP32::I2C.new(ESP32::I2C::NUM_0, ESP32::I2C::MODE_MASTER, 0, 0, 0)
 conf = ::ESP32::I2C::Config.new(
   mode:          ::ESP32::I2C::MODE_MASTER,

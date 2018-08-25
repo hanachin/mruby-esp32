@@ -69,4 +69,6 @@ MRuby::CrossBuild.new('esp32') do |conf|
   conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-i2c"
   conf.gem "/home/sei/src/github.com/hanachin/mruby-esp32-gpio"
   conf.gem "/home/sei/src/github.com/hanachin/mruby-mcp23017"
+  conf.gem "/home/sei/src/github.com/mruby-esp32/mruby-esp32-nvs"
+  conf.gem "/home/sei/src/github.com/mruby-esp32/mruby-esp32-bluetooth"
 end
